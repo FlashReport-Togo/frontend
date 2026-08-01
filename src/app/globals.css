@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* Mode sombre piloté par une classe .dark sur <html> (pas par prefers-color-scheme),
+   pour permettre un vrai bouton de bascule persisté (cf. layout.tsx). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* --- Palette (exacte, cf. brief) --- */
+  --surface: #F3F4F6;
+  --surface-elevated: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --accent-cyan: #00B4D8;
+  --accent-blue: #2563EB;
+  --border-subtle: #E2E8F0;
+
+  /* --- Sémantique statut/sévérité (dérivée, contraste vérifié sur fond clair) --- */
+  --severity-low: #059669;
+  --severity-medium: #D97706;
+  --severity-critical: #DC2626;
+  --status-draft: #64748B;
+  --status-submitted: #2563EB;
+  --status-validated: #059669;
+  --status-rejected: #DC2626;
+}
+
+.dark {
+  --surface: #0F172A;
+  --surface-elevated: #16213A;
+  --text-primary: #F3F4F6;
+  --text-secondary: #94A3B8;
+  --accent-cyan: #00B4D8;
+  --accent-blue: #3B82F6;
+  --border-subtle: #263248;
+
+  --severity-low: #34D399;
+  --severity-medium: #FBBF24;
+  --severity-critical: #F87171;
+  --status-draft: #94A3B8;
+  --status-submitted: #3B82F6;
+  --status-validated: #34D399;
+  --status-rejected: #F87171;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-blue: var(--accent-blue);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-severity-low: var(--severity-low);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-critical: var(--severity-critical);
+  --color-status-draft: var(--status-draft);
+  --color-status-submitted: var(--status-submitted);
+  --color-status-validated: var(--status-validated);
+  --color-status-rejected: var(--status-rejected);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--surface);
+  color: var(--text-primary);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Focus clavier visible partout — pas de outline: none silencieux */
+:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
