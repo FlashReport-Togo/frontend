@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { accountsApi } from "@/lib/endpoints/accounts";
 import { ROLE_LABELS, useAuthStore } from "@/store/auth-store";
+import { getFcmToken } from "@/lib/firebase";
 
 const schema = z
   .object({
@@ -48,6 +49,7 @@ export default function SettingsPage() {
     }
   };
 
+  /*
   const enablePush = async () => {
     if (!("Notification" in window)) {
       toast.error("Ce navigateur ne supporte pas les notifications push.");
@@ -60,6 +62,31 @@ export default function SettingsPage() {
       // projet + clé VAPID côté client, non fournis à ce stade). Une fois ces éléments
       // disponibles, appeler accountsApi.setFcmToken(token) ici.
       toast.info("Autorisation accordée. Intégration du SDK Firebase Web à finaliser côté client.");
+    }
+  };*/
+
+  const enablePush = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Ce navigateur ne supporte pas les notifications push.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setPushStatus(permission === "granted" ? "granted" : "denied");
+
+    if (permission === "granted") {
+      try {
+        const token = await getFcmToken();
+        
+        if (token) {
+          await accountsApi.setFcmToken(token);
+          toast.success("Notifications push activées avec succès !");
+        } else {
+          toast.error("Impossible de récupérer le token de notification.");
+        }
+      } catch (error) {
+        toast.error("Erreur lors de la configuration des notifications.");
+      }
     }
   };
 
