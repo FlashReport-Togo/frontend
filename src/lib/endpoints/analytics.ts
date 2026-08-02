@@ -20,6 +20,8 @@ export interface CompletenessRow {
   district_id: string;
   district_name: string;
   region_name: string;
+  disease_id: string;
+  disease_name: string;
   completeness_pct: number | null;
   promptness_pct: number | null;
 }

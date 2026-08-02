@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import type { Disease, District, Region } from "@/types";
+import type { Disease, District, Region, ReportFormTemplate } from "@/types";
 
 export const geographyApi = {
   listRegions: () => api.get<Region[]>("/regions/", { params: {} }).then((r) => r.data),
@@ -24,4 +24,18 @@ export const geographyApi = {
     api.patch<Disease>(`/diseases/${id}/`, payload).then((r) => r.data),
   setThreshold: (id: string, payload: { epidemic_threshold: number; threshold_period: string }) =>
     api.patch<Disease>(`/diseases/${id}/threshold/`, payload).then((r) => r.data),
+};
+
+export const formTemplatesApi = {
+  list: (params?: { disease?: string }) =>
+    api.get<ReportFormTemplate[]>("/form-templates/", { params }).then((r) => r.data),
+  get: (id: string) => api.get<ReportFormTemplate>(`/form-templates/${id}/`).then((r) => r.data),
+  getByDisease: async (diseaseId: string) => {
+    const list = await api.get<ReportFormTemplate[]>("/form-templates/", { params: { disease: diseaseId } });
+    return list.data[0] ?? null;
+  },
+  create: (payload: Partial<ReportFormTemplate>) =>
+    api.post<ReportFormTemplate>("/form-templates/", payload).then((r) => r.data),
+  update: (id: string, payload: Partial<ReportFormTemplate>) =>
+    api.patch<ReportFormTemplate>(`/form-templates/${id}/`, payload).then((r) => r.data),
 };

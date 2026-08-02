@@ -11,8 +11,10 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Select } from "@/components/ui/select";
 import { Table, Tbody, Td, Th, Thead, Tr } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { geographyApi } from "@/lib/endpoints/geography";
 import { ocrApi } from "@/lib/endpoints/ocr";
 import type { OCRScanStatus } from "@/types";
 
@@ -26,7 +28,10 @@ export default function OcrPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [diseaseId, setDiseaseId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { data: diseases } = useQuery({ queryKey: ["diseases"], queryFn: () => geographyApi.listDiseases({ is_active: true }) });
 
   const { data, isLoading } = useQuery({
     queryKey: ["ocr-scans"],
@@ -35,9 +40,13 @@ export default function OcrPage() {
   });
 
   const upload = async (file: File) => {
+    if (!diseaseId) {
+      toast.error("Choisissez d'abord la maladie / le formulaire scanné.");
+      return;
+    }
     setUploading(true);
     try {
-      const scan = await ocrApi.uploadScan(file);
+      const scan = await ocrApi.uploadScan(file, diseaseId);
       toast.success("Scan envoyé — traitement en cours.");
       queryClient.invalidateQueries({ queryKey: ["ocr-scans"] });
       router.push(`/ocr/${scan.id}`);
@@ -57,10 +66,19 @@ export default function OcrPage() {
         </p>
       </div>
 
+      <div className="w-64">
+        <Select label="Maladie / formulaire scanné" value={diseaseId} onChange={(e) => setDiseaseId(e.target.value)}>
+          <option value="">Sélectionner…</option>
+          {diseases?.map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </Select>
+      </div>
+
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={uploading}
+        disabled={uploading || !diseaseId}
         className={cn(
           "flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border-subtle bg-surface-elevated px-6 py-12 text-center transition-colors",
           "hover:border-accent-blue/50 hover:bg-accent-blue/5 disabled:opacity-60"
@@ -71,7 +89,7 @@ export default function OcrPage() {
         </div>
         <div>
           <p className="text-sm font-medium text-primary">
-            {uploading ? "Envoi en cours…" : "Cliquez pour sélectionner une photo du registre"}
+            {!diseaseId ? "Choisissez d'abord une maladie" : uploading ? "Envoi en cours…" : "Cliquez pour sélectionner une photo du registre"}
           </p>
           <p className="mt-1 text-xs text-secondary">JPG, PNG — un tableau lisible par prise de vue</p>
         </div>

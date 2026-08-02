@@ -174,7 +174,7 @@ export default function UsersPage() {
           {role === "district_agent" && (
             <Select label="District" error={errors.district?.message} {...register("district")}>
               <option value="">Sélectionner…</option>
-              {districts && districts?.map((d) => (
+              {districts?.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>

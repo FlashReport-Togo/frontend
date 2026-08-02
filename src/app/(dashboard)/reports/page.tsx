@@ -25,17 +25,20 @@ export default function ReportsListPage() {
   const [status, setStatus] = useState<ReportStatus | "">("");
   const [periodType, setPeriodType] = useState<PeriodType | "">("");
   const [district, setDistrict] = useState("");
+  const [disease, setDisease] = useState("");
   const [page, setPage] = useState(1);
 
   const { data: districts } = useQuery({ queryKey: ["districts"], queryFn: () => geographyApi.listDistricts() });
+  const { data: diseases } = useQuery({ queryKey: ["diseases"], queryFn: () => geographyApi.listDiseases() });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["reports", { status, periodType, district, page }],
+    queryKey: ["reports", { status, periodType, district, disease, page }],
     queryFn: () =>
       reportsApi.list({
         status: status || undefined,
         period_type: periodType || undefined,
         district: district || undefined,
+        disease: disease || undefined,
         page,
       }),
   });
@@ -72,11 +75,19 @@ export default function ReportsListPage() {
               <option value="hebdomadaire">Hebdomadaire</option>
             </Select>
           </div>
+          <div className="w-52">
+            <Select value={disease} onChange={(e) => { setDisease(e.target.value); setPage(1); }}>
+              <option value="">Toutes les maladies</option>
+              {diseases?.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </Select>
+          </div>
           {user?.role !== "district_agent" && (
             <div className="w-52">
               <Select value={district} onChange={(e) => { setDistrict(e.target.value); setPage(1); }}>
                 <option value="">Tous les districts</option>
-                {(districts?? []).map((d) => (
+                {districts?.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
@@ -101,6 +112,7 @@ export default function ReportsListPage() {
                 <tr>
                   <Th>District</Th>
                   <Th>Région</Th>
+                  <Th>Maladie</Th>
                   <Th>Période</Th>
                   <Th>Canal</Th>
                   <Th>Score qualité</Th>
@@ -112,6 +124,7 @@ export default function ReportsListPage() {
                   <Tr key={r.id} onClick={() => router.push(`/reports/${r.id}`)}>
                     <Td className="font-medium">{r.district_name}</Td>
                     <Td className="text-secondary">{r.region_name}</Td>
+                    <Td>{r.disease_name}</Td>
                     <Td className="font-mono text-xs">
                       {r.period_start}
                       {r.period_start !== r.period_end ? ` → ${r.period_end}` : ""}

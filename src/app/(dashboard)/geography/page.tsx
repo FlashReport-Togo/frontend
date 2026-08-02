@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, FileSpreadsheet, Pencil, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -70,7 +71,7 @@ function DistrictsTable() {
             </tr>
           </Thead>
           <Tbody>
-            {districts && districts?.map((d) => (
+            {districts?.map((d) => (
               <Tr key={d.id}>
                 <Td className="font-medium">{d.name}</Td>
                 <Td className="text-secondary">{d.region_name}</Td>
@@ -146,6 +147,7 @@ function DiseasesTable() {
               <Th>Catégorie</Th>
               <Th>Seuil épidémique</Th>
               <Th>Mapping DHIS2</Th>
+              <Th>Formulaire</Th>
               <Th />
             </tr>
           </Thead>
@@ -186,6 +188,14 @@ function DiseasesTable() {
                   <Badge className={d.dhis2_mapping_complete ? "bg-severity-low/12 text-severity-low" : ""}>
                     {d.dhis2_mapping_complete ? "Mappé" : "Non mappé"}
                   </Badge>
+                </Td>
+                <Td>
+                  <Link
+                    href={`/geography/templates/${d.id}`}
+                    className="flex items-center gap-1.5 text-sm font-medium text-accent-blue hover:underline"
+                  >
+                    <FileSpreadsheet size={14} /> Configurer
+                  </Link>
                 </Td>
                 <Td>
                   <button

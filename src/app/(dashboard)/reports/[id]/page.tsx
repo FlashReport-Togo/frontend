@@ -3,24 +3,22 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Bot, Save, Send, Share2, XCircle } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import { DynamicFormTable } from "@/components/reports/dynamic-form-table";
 import { QualityCheckList } from "@/components/reports/quality-check-list";
 import { ReportTimeline } from "@/components/reports/report-timeline";
 import { Button } from "@/components/ui/button";
 import { ReportStatusBadge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, Tbody, Td, Th, Thead } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api-client";
 import { dhis2Api } from "@/lib/endpoints/dhis2";
 import { ocrApi } from "@/lib/endpoints/ocr";
 import { reportsApi } from "@/lib/endpoints/reports";
-import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import type { QualityCheckResult } from "@/types";
 
@@ -39,7 +37,7 @@ export default function ReportDetailPage() {
     queryFn: () => reportsApi.history(id),
   });
 
-  const [rows, setRows] = useState<Record<string, { cases: number; deaths: number }>>({});
+  const [pendingValues, setPendingValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [blockingErrors, setBlockingErrors] = useState<QualityCheckResult[] | null>(null);
@@ -49,13 +47,7 @@ export default function ReportDetailPage() {
   const [validating, setValidating] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-
-  useEffect(() => {
-    if (report) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronise l'état d'édition local avec les données serveur à chaque refetch
-      setRows(Object.fromEntries(report.data_values.map((dv) => [dv.id, { cases: dv.cases, deaths: dv.deaths }])));
-    }
-  }, [report]);
+  const [busyAction, setBusyAction] = useState(false);
 
   if (isLoading || !report) {
     return (
@@ -72,12 +64,17 @@ export default function ReportDetailPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["reports", id] });
 
+  const persistPendingCells = async () => {
+    const cells = Object.entries(pendingValues).map(([cellId, value]) => ({ id: cellId, value }));
+    if (cells.length === 0) return;
+    await reportsApi.updateCells(id, cells);
+    setPendingValues({});
+  };
+
   const saveChanges = async () => {
     setSaving(true);
     try {
-      await api.put(`/reports/${id}/data-values/`, {
-        data_values: Object.entries(rows).map(([rowId, v]) => ({ id: rowId, ...v })),
-      });
+      await persistPendingCells();
       toast.success("Modifications enregistrées.");
       invalidate();
     } catch {
@@ -91,7 +88,7 @@ export default function ReportDetailPage() {
     setSubmitting(true);
     setBlockingErrors(null);
     try {
-      if (Object.keys(rows).length) await saveChangesSilently();
+      await persistPendingCells();
       await reportsApi.submit(id);
       toast.success("Rapport soumis pour validation.");
       invalidate();
@@ -108,10 +105,28 @@ export default function ReportDetailPage() {
     }
   };
 
-  const saveChangesSilently = async () => {
-    await api.put(`/reports/${id}/data-values/`, {
-      data_values: Object.entries(rows).map(([rowId, v]) => ({ id: rowId, ...v })),
-    });
+  const addRow = async (label: string) => {
+    setBusyAction(true);
+    try {
+      await reportsApi.addRow(id, label);
+      invalidate();
+    } catch {
+      toast.error("Échec de l'ajout de la ligne.");
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const addColumn = async (label: string) => {
+    setBusyAction(true);
+    try {
+      await reportsApi.addColumn(id, label);
+      invalidate();
+    } catch {
+      toast.error("Échec de l'ajout de la colonne.");
+    } finally {
+      setBusyAction(false);
+    }
   };
 
   const validate = async () => {
@@ -146,7 +161,7 @@ export default function ReportDetailPage() {
     setPushing(true);
     try {
       await dhis2Api.push(id);
-      toast.success("Envoi vers DHIS2 lancé — le statut sera visible dans le journal DHIS2.");
+      toast.success("Envoi vers DHIS2 lancé — consultez le journal DHIS2 pour le résultat.");
     } catch {
       toast.error("Échec du déclenchement de l'envoi DHIS2.");
     } finally {
@@ -167,11 +182,13 @@ export default function ReportDetailPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-semibold tracking-tight text-primary">{report.district_name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-primary">
+              {report.disease_name} — {report.district_name}
+            </h1>
             <ReportStatusBadge status={report.status} />
           </div>
           <p className="mt-1 font-mono text-sm text-secondary">
@@ -226,10 +243,8 @@ export default function ReportDetailPage() {
 
       {blockingErrors && (
         <Card className="border-severity-critical/30">
-          <CardHeader>
-            <CardTitle className="text-severity-critical">Anomalies bloquantes</CardTitle>
-          </CardHeader>
           <CardContent>
+            <p className="mb-3 text-sm font-semibold text-severity-critical">Anomalies bloquantes</p>
             <QualityCheckList reportId={id} checks={blockingErrors} />
           </CardContent>
         </Card>
@@ -246,70 +261,16 @@ export default function ReportDetailPage() {
 
         <TabsContent value="data">
           <Card>
-            <Table>
-              <Thead>
-                <tr>
-                  <Th>Maladie</Th>
-                  <Th>Cas</Th>
-                  <Th>Décès</Th>
-                  <Th>Confiance OCR</Th>
-                </tr>
-              </Thead>
-              <Tbody>
-                {report.data_values.map((dv) => {
-                  const lowConfidence = dv.confidence_score !== null && dv.confidence_score < 90;
-                  return (
-                    <tr key={dv.id} className={cn(lowConfidence && "bg-severity-medium/5")}>
-                      <Td className="font-medium">{dv.disease_name}</Td>
-                      <Td>
-                        {canEdit ? (
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-20 rounded-lg border border-border-subtle bg-surface px-2 py-1 font-mono text-sm text-primary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/25"
-                            value={rows[dv.id]?.cases ?? dv.cases}
-                            onChange={(e) =>
-                              setRows((r) => ({ ...r, [dv.id]: { ...r[dv.id], cases: Number(e.target.value) } }))
-                            }
-                          />
-                        ) : (
-                          <span className="font-mono">{dv.cases}</span>
-                        )}
-                      </Td>
-                      <Td>
-                        {canEdit ? (
-                          <input
-                            type="number"
-                            min={0}
-                            className="w-20 rounded-lg border border-border-subtle bg-surface px-2 py-1 font-mono text-sm text-primary focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue/25"
-                            value={rows[dv.id]?.deaths ?? dv.deaths}
-                            onChange={(e) =>
-                              setRows((r) => ({ ...r, [dv.id]: { ...r[dv.id], deaths: Number(e.target.value) } }))
-                            }
-                          />
-                        ) : (
-                          <span className="font-mono">{dv.deaths}</span>
-                        )}
-                      </Td>
-                      <Td>
-                        {dv.confidence_score !== null ? (
-                          <span
-                            className={cn(
-                              "font-mono text-xs",
-                              lowConfidence ? "text-severity-medium" : "text-severity-low"
-                            )}
-                          >
-                            {dv.confidence_score}%{dv.confidence_note ? ` · ${dv.confidence_note}` : ""}
-                          </span>
-                        ) : (
-                          <span className="text-secondary">—</span>
-                        )}
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </Tbody>
-            </Table>
+            <CardContent className={busyAction ? "opacity-60" : ""}>
+              <DynamicFormTable
+                report={report}
+                editable={canEdit}
+                pendingValues={pendingValues}
+                onCellChange={(cellId, value) => setPendingValues((p) => ({ ...p, [cellId]: value }))}
+                onAddRow={canEdit ? addRow : undefined}
+                onAddColumn={canEdit ? addColumn : undefined}
+              />
+            </CardContent>
           </Card>
         </TabsContent>
 

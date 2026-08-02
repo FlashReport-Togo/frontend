@@ -32,8 +32,8 @@ export default function AnalyticsPage() {
   });
 
   const { data: completeness, isLoading: loadingCompleteness } = useQuery({
-    queryKey: ["analytics", "completeness"],
-    queryFn: () => analyticsApi.completeness(),
+    queryKey: ["analytics", "completeness", diseaseId],
+    queryFn: () => analyticsApi.completeness({ disease: diseaseId || undefined }),
   });
 
   const { data: quality, isLoading: loadingQuality } = useQuery({
@@ -147,15 +147,17 @@ export default function AnalyticsPage() {
                   <tr>
                     <Th>District</Th>
                     <Th>Région</Th>
+                    <Th>Maladie</Th>
                     <Th>Complétude</Th>
                     <Th>Promptitude</Th>
                   </tr>
                 </Thead>
                 <Tbody>
                   {completeness?.map((row) => (
-                    <Tr key={row.district_id}>
+                    <Tr key={`${row.district_id}-${row.disease_id}`}>
                       <Td className="font-medium">{row.district_name}</Td>
                       <Td className="text-secondary">{row.region_name}</Td>
+                      <Td className="text-secondary">{row.disease_name}</Td>
                       <Td className="font-mono">{row.completeness_pct !== null ? `${row.completeness_pct}%` : "—"}</Td>
                       <Td className="font-mono">{row.promptness_pct !== null ? `${row.promptness_pct}%` : "—"}</Td>
                     </Tr>

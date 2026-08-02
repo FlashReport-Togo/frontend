@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { ColumnMappingModal } from "@/components/reports/column-mapping-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { reportsApi } from "@/lib/endpoints/reports";
+import { formTemplatesApi } from "@/lib/endpoints/geography";
+import { columnMappingsApi, reportsApi } from "@/lib/endpoints/reports";
 import { cn } from "@/lib/utils";
+import type { FormColumnDef, ReportDetail } from "@/types";
 
 type Kind = "excel" | "pdf";
 
@@ -17,15 +20,34 @@ export default function ImportReportPage() {
   const excelRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
 
+  const [createdReport, setCreatedReport] = useState<ReportDetail | null>(null);
+  const [unmapped, setUnmapped] = useState<string[]>([]);
+  const [targetColumns, setTargetColumns] = useState<FormColumnDef[]>([]);
+  const [existingMapping, setExistingMapping] = useState<Record<string, string>>({});
+  const [existingMappingId, setExistingMappingId] = useState<string | undefined>();
+  const [mappingOpen, setMappingOpen] = useState(false);
+
   const upload = async (kind: Kind, file: File) => {
     setUploading(kind);
     try {
       const report = kind === "excel" ? await reportsApi.importExcel(file) : await reportsApi.importPdf(file);
-      if (report.unmatched_diseases?.length) {
-        toast.warning(`Maladies non reconnues : ${report.unmatched_diseases.join(", ")}`);
+
+      if (report.unmapped_columns?.length) {
+        const [template, mapping] = await Promise.all([
+          formTemplatesApi.getByDisease(report.disease),
+          columnMappingsApi.getOne(report.disease, "import"),
+        ]);
+        setCreatedReport(report);
+        setUnmapped(report.unmapped_columns);
+        setTargetColumns(template?.columns ?? []);
+        setExistingMapping(mapping?.mapping ?? {});
+        setExistingMappingId(mapping?.id);
+        setMappingOpen(true);
+        toast.warning(`${report.unmapped_columns.length} colonne(s) non reconnue(s) — à associer.`);
+      } else {
+        toast.success("Rapport importé en brouillon.");
+        router.push(`/reports/${report.id}`);
       }
-      toast.success("Rapport importé en brouillon.");
-      router.push(`/reports/${report.id}`);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { detail?: string } } };
       toast.error(axiosErr.response?.data?.detail ?? "Échec de l'import.");
@@ -39,7 +61,7 @@ export default function ImportReportPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-primary">Importer un rapport</h1>
         <p className="mt-1 text-sm text-secondary">
-          Utilisez le gabarit standard (District / Période / tableau Maladie–Cas–Décès).
+          Utilisez le gabarit standard (District / Maladie / Période / tableau).
         </p>
       </div>
 
@@ -81,12 +103,34 @@ export default function ImportReportPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm text-secondary">
           <p>Ligne 1 : <code className="font-mono text-primary">District: &lt;code_district&gt;</code></p>
+          <p>Ligne 2 : <code className="font-mono text-primary">Maladie: &lt;nom_maladie&gt;</code></p>
           <p>
-            Ligne 2 : <code className="font-mono text-primary">Période: AAAA-MM-JJ au AAAA-MM-JJ</code>
+            Ligne 3 : <code className="font-mono text-primary">Période: AAAA-MM-JJ au AAAA-MM-JJ</code>
           </p>
-          <p>Puis un tableau avec les colonnes : Maladie · Cas · Décès</p>
+          <p>Puis un tableau : première colonne = libellé de ligne, colonnes suivantes libres.</p>
+          <p className="text-xs">
+            Si les colonnes du document ne correspondent pas au formulaire, une correspondance vous sera
+            demandée une fois — elle sera ensuite réutilisée automatiquement.
+          </p>
         </CardContent>
       </Card>
+
+      {createdReport && (
+        <ColumnMappingModal
+          open={mappingOpen}
+          onOpenChange={(open) => {
+            setMappingOpen(open);
+            if (!open) router.push(`/reports/${createdReport.id}`);
+          }}
+          unmappedColumns={unmapped}
+          targetColumns={targetColumns}
+          diseaseId={createdReport.disease}
+          context="import"
+          existingMapping={existingMapping}
+          existingMappingId={existingMappingId}
+          onSaved={() => router.push(`/reports/${createdReport.id}`)}
+        />
+      )}
     </div>
   );
 }

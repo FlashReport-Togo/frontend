@@ -40,21 +40,80 @@ export interface Disease {
   dhis2_mapping_complete: boolean;
 }
 
+// --- Gabarit de formulaire (façon DHIS2) ---------------------------------
+
+export type ColumnDataType = "integer" | "decimal" | "text" | "boolean";
+
+export interface FormColumnDef {
+  key: string;
+  label: string;
+  data_type: ColumnDataType;
+  allow_zero: boolean;
+  required: boolean;
+  is_primary_metric: boolean;
+  dhis2_data_element_uid?: string | null;
+}
+
+export interface FormRowDef {
+  key: string;
+  label: string;
+  dhis2_category_option_combo_uid?: string | null;
+}
+
+export type ValidationRuleType = "lte" | "gte" | "eq";
+
+export interface FormValidationRule {
+  type: ValidationRuleType;
+  column_a: string;
+  column_b: string;
+  message?: string;
+}
+
+export interface ReportFormTemplate {
+  id: string;
+  disease: string;
+  disease_name: string;
+  columns: FormColumnDef[];
+  rows: FormRowDef[];
+  rows_editable: boolean;
+  columns_editable: boolean;
+  validation_rules: FormValidationRule[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormSnapshot {
+  columns: FormColumnDef[];
+  rows: FormRowDef[];
+  rows_editable: boolean;
+  columns_editable: boolean;
+  validation_rules: FormValidationRule[];
+}
+
+// --- Rapports (générique lignes × colonnes) -------------------------------
+
 export type ReportStatus = "brouillon" | "soumis" | "validé" | "rejeté";
 export type PeriodType = "journalier" | "hebdomadaire";
 export type SourceChannel = "manuel" | "import_excel" | "import_pdf" | "ocr";
 
-export interface ReportDataValue {
+export interface ReportCell {
   id: string;
-  report: string;
-  disease: string;
-  disease_name: string;
-  cases: number;
-  deaths: number;
-  notes: string | null;
+  column_key: string;
+  column_label: string;
+  is_custom: boolean;
+  value: string | null;
   confidence_score: number | null;
   confidence_note: string | null;
   requires_manual_review: boolean;
+}
+
+export interface ReportRow {
+  id: string;
+  row_key: string;
+  row_label: string;
+  is_custom: boolean;
+  order: number;
+  cells: ReportCell[];
 }
 
 export type QualitySeverity = "info" | "avertissement" | "bloquant";
@@ -62,8 +121,9 @@ export type QualitySeverity = "info" | "avertissement" | "bloquant";
 export interface QualityCheckResult {
   id: string;
   report: string;
-  report_data_value: string | null;
-  disease_name: string | null;
+  report_cell: string | null;
+  row_label: string | null;
+  column_label: string | null;
   rule_code: string;
   severity: QualitySeverity;
   message: string;
@@ -79,12 +139,15 @@ export interface ReportListItem {
   district: string;
   district_name: string;
   region_name: string;
+  disease: string;
+  disease_name: string;
   period_type: PeriodType;
   period_start: string;
   period_end: string;
   status: ReportStatus;
   source_channel: SourceChannel;
   quality_score: string | null;
+  ocr_scan: string | null;
   submitted_at: string | null;
   validated_at: string | null;
   created_at: string;
@@ -95,7 +158,8 @@ export interface ReportDetail extends ReportListItem {
   validated_by: string | null;
   rejection_reason: string | null;
   ocr_scan: string | null;
-  data_values: ReportDataValue[];
+  form_snapshot: FormSnapshot;
+  rows: ReportRow[];
   quality_checks: QualityCheckResult[];
   updated_at: string;
 }
@@ -109,6 +173,20 @@ export interface ReportHistoryEntry {
   diff: Record<string, unknown> | null;
   created_at: string;
 }
+
+export type MappingContext = "ocr" | "import" | "export";
+
+export interface ReportColumnMapping {
+  id: string;
+  disease: string;
+  disease_name: string;
+  context: MappingContext;
+  mapping: Record<string, string>; // { target_column_key: source_column_key }
+  updated_by: string | null;
+  updated_at: string;
+}
+
+// --- Alertes / notifications ----------------------------------------------
 
 export type AlertType = "rapport_manquant" | "seuil_epidemique" | "anomalie_donnees";
 export type AlertSeverity = "faible" | "moyenne" | "critique";
@@ -142,12 +220,15 @@ export interface NotificationItem {
   created_at: string;
 }
 
+// --- OCR / IA ---------------------------------------------------------------
+
 export type OCRScanStatus = "en_attente" | "traité" | "échec";
 
 export interface OCRScan {
   id: string;
   uploaded_by: string;
   district: string;
+  disease: string;
   image_url: string;
   cloudinary_public_id: string;
   model_used: string;
@@ -157,6 +238,8 @@ export interface OCRScan {
   raw_ai_response: unknown;
   created_at: string;
 }
+
+// --- DHIS2 -------------------------------------------------------------------
 
 export type DHIS2PushStatus = "succès" | "échec_partiel" | "échec";
 
@@ -180,6 +263,8 @@ export interface DHIS2MetadataCacheItem {
   synced_at: string;
 }
 
+// --- Exports -------------------------------------------------------------------
+
 export type ExportType = "reports_pdf" | "reports_excel" | "analytics_pdf";
 export type ExportStatus = "en_cours" | "prêt" | "échec";
 
@@ -193,6 +278,8 @@ export interface ReportExportItem {
   error_message: string | null;
   created_at: string;
 }
+
+// --- Utilisateurs -------------------------------------------------------------
 
 export interface AppUser {
   id: string;
