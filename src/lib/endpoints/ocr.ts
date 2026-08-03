@@ -9,9 +9,15 @@ export interface AIAnalysisHistoryEntry {
   created_at: string;
 }
 
+interface AIAnalysisHistoryResponse {count	: number ,next : 	null | number,previous: number |	null,results: AIAnalysisHistoryEntry[]}
+
+const resultToString = (response : AIAnalysisHistoryResponse) => {
+  return response.results;
+}
+
 export const ocrApi = {
   analysisHistory: (reportId: string) =>
-    api.get<AIAnalysisHistoryEntry[]>(`/ai/analyzereport/${reportId}/history/`).then((r) => r.data),
+    api.get<AIAnalysisHistoryResponse>(`/ai/analyzereport/${reportId}/history/`).then((r) => { return resultToString(r.data) }),
 
   uploadScan: (file: File, diseaseId: string) => {
     const formData = new FormData();
