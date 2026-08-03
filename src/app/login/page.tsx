@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { api } from "@/lib/api-client";
 import { useAuthStore } from "@/store/auth-store";
+import { toast } from "sonner";
+import { getFcmToken } from "@/lib/firebase";
+import { accountsApi } from "@/lib/endpoints/accounts";
 
 const loginSchema = z.object({
   email: z.string().min(1, "L'email est requis.").email("Adresse email invalide."),
@@ -26,6 +29,31 @@ const PILLARS = [
   { icon: ShieldCheck, text: "Contrôle qualité systématique des rapports" },
   { icon: MapPinned, text: "Synchronisation directe avec DHIS2" },
 ];
+
+const enablePush = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Ce navigateur ne supporte pas les notifications push.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+
+    if (permission === "granted") {
+      try {
+        const token = await getFcmToken();
+        
+        if (token) {
+          await accountsApi.setFcmToken(token);
+          toast.success("Notifications push activées avec succès !");
+        } else {
+          toast.error("Impossible de récupérer le token de notification.");
+        }
+      } catch (error) {
+        toast.error("Erreur lors de la configuration des notifications.");
+      }
+    }
+  };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,6 +72,8 @@ export default function LoginPage() {
     try {
       const { data } = await api.post("/auth/login/", values);
       setSession({ access: data.access, refresh: data.refresh, user: data.user });
+      
+      enablePush();
       router.push("/dashboard");
     } catch {
       setServerError("Email ou mot de passe incorrect.");
