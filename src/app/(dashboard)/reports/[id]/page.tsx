@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { dhis2Api } from "@/lib/endpoints/dhis2";
 import { ocrApi } from "@/lib/endpoints/ocr";
 import { reportsApi } from "@/lib/endpoints/reports";
+import { useAiAnalysisStore } from "@/store/ai-analysis-store";
 import { useAuthStore } from "@/store/auth-store";
 import type { QualityCheckResult } from "@/types";
 
@@ -26,6 +27,7 @@ export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const aiResult = useAiAnalysisStore((s) => s.results[id]);
 
   const { data: report, isLoading } = useQuery({
     queryKey: ["reports", id],
@@ -246,6 +248,33 @@ export default function ReportDetailPage() {
           <CardContent>
             <p className="mb-3 text-sm font-semibold text-severity-critical">Anomalies bloquantes</p>
             <QualityCheckList reportId={id} checks={blockingErrors} />
+          </CardContent>
+        </Card>
+      )}
+
+      {aiResult && (
+        <Card className="border-accent-blue/30">
+          <CardContent className="flex flex-col gap-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-accent-blue">
+              <Bot size={16} /> Analyse IA
+            </p>
+            {aiResult.synthese && <p className="text-sm text-primary">{String(aiResult.synthese)}</p>}
+            {Array.isArray(aiResult.tendances) && aiResult.tendances.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Tendances</p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
+                  {aiResult.tendances.map((t, i) => <li key={i}>{String(t)}</li>)}
+                </ul>
+              </div>
+            )}
+            {Array.isArray(aiResult.anomalies) && aiResult.anomalies.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Anomalies</p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
+                  {aiResult.anomalies.map((a, i) => <li key={i}>{String(a)}</li>)}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

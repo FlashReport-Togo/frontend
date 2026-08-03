@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { useAuthStore } from "@/store/auth-store";
+import { useAiAnalysisStore } from "@/store/ai-analysis-store";
 
 type WsPayload =
   | { type: "alert"; alert_id: string; notification_id: string; alert_type: string; severity: string; message: string }
@@ -52,6 +53,7 @@ export function useRealtimeNotifications() {
           break;
         case "ai_analysis_ready":
           toast.success("Analyse IA terminée.");
+          useAiAnalysisStore.getState().setResult(payload.report_id, payload.result as Record<string, unknown>);
           queryClient.invalidateQueries({ queryKey: ["reports", payload.report_id] });
           break;
         case "export_ready":

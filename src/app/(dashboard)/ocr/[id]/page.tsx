@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Link2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,6 +19,7 @@ import { slugify } from "@/lib/utils";
 
 export default function OcrScanDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const [mappingOpen, setMappingOpen] = useState(false);
 
   const { data: scan, isLoading } = useQuery({
@@ -136,6 +137,7 @@ export default function OcrScanDetailPage() {
           context="ocr"
           existingMapping={mapping?.mapping ?? {}}
           existingMappingId={mapping?.id}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["column-mappings", scan.disease, "ocr"] })}
         />
       )}
     </div>
