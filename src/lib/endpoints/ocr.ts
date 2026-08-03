@@ -1,7 +1,18 @@
 import { api } from "@/lib/api-client";
 import type { OCRScan, Paginated } from "@/types";
 
+export interface AIAnalysisHistoryEntry {
+  id: string;
+  result: { tendances?: string[]; anomalies?: string[]; synthese?: string; [key: string]: unknown };
+  model_used: string;
+  requested_by_name: string | null;
+  created_at: string;
+}
+
 export const ocrApi = {
+  analysisHistory: (reportId: string) =>
+    api.get<AIAnalysisHistoryEntry[]>(`/ai/analyzereport/${reportId}/history/`).then((r) => r.data),
+
   uploadScan: (file: File, diseaseId: string) => {
     const formData = new FormData();
     formData.append("file", file);

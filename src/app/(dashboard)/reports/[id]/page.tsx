@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { dhis2Api } from "@/lib/endpoints/dhis2";
 import { ocrApi } from "@/lib/endpoints/ocr";
 import { reportsApi } from "@/lib/endpoints/reports";
-import { useAiAnalysisStore } from "@/store/ai-analysis-store";
 import { useAuthStore } from "@/store/auth-store";
 import type { QualityCheckResult } from "@/types";
 
@@ -27,7 +26,11 @@ export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const aiResult = useAiAnalysisStore((s) => s.results[id]);
+
+  const { data: aiHistory } = useQuery({
+    queryKey: ["ai-analysis-history", id],
+    queryFn: () => ocrApi.analysisHistory(id),
+  });
 
   const { data: report, isLoading } = useQuery({
     queryKey: ["reports", id],
@@ -252,38 +255,14 @@ export default function ReportDetailPage() {
         </Card>
       )}
 
-      {aiResult && (
-        <Card className="border-accent-blue/30">
-          <CardContent className="flex flex-col gap-4">
-            <p className="flex items-center gap-2 text-sm font-semibold text-accent-blue">
-              <Bot size={16} /> Analyse IA
-            </p>
-            {aiResult.synthese && <p className="text-sm text-primary">{String(aiResult.synthese)}</p>}
-            {Array.isArray(aiResult.tendances) && aiResult.tendances.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Tendances</p>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
-                  {aiResult.tendances.map((t, i) => <li key={i}>{String(t)}</li>)}
-                </ul>
-              </div>
-            )}
-            {Array.isArray(aiResult.anomalies) && aiResult.anomalies.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Anomalies</p>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
-                  {aiResult.anomalies.map((a, i) => <li key={i}>{String(a)}</li>)}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       <Tabs defaultValue="data">
         <TabsList>
           <TabsTrigger value="data">Données</TabsTrigger>
           <TabsTrigger value="quality">
             Contrôle qualité{report.quality_checks.length > 0 ? ` (${report.quality_checks.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="ai">
+            Analyse IA{aiHistory && aiHistory.length > 0 ? ` (${aiHistory.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
         </TabsList>
@@ -309,6 +288,50 @@ export default function ReportDetailPage() {
               <QualityCheckList reportId={id} checks={report.quality_checks} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <div className="flex flex-col gap-4">
+            {!aiHistory || aiHistory.length === 0 ? (
+              <Card>
+                <CardContent>
+                  <p className="text-sm text-secondary">
+                    Aucune analyse IA pour ce rapport. Utilisez le bouton « Analyse IA » ci-dessus pour en lancer une.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              aiHistory.map((entry) => (
+                <Card key={entry.id} className={entry === aiHistory[0] ? "border-accent-blue/30" : undefined}>
+                  <CardContent className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between text-xs text-secondary">
+                      <span className="flex items-center gap-1.5 font-medium text-accent-blue">
+                        <Bot size={14} /> {entry.model_used}
+                      </span>
+                      <span className="font-mono">{new Date(entry.created_at).toLocaleString("fr-FR")}</span>
+                    </div>
+                    {entry.result.synthese && <p className="text-sm text-primary">{String(entry.result.synthese)}</p>}
+                    {Array.isArray(entry.result.tendances) && entry.result.tendances.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Tendances</p>
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
+                          {entry.result.tendances.map((t, i) => <li key={i}>{String(t)}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {Array.isArray(entry.result.anomalies) && entry.result.anomalies.length > 0 && (
+                      <div>
+                        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Anomalies</p>
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
+                          {entry.result.anomalies.map((a, i) => <li key={i}>{String(a)}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="history">
