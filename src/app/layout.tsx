@@ -20,6 +20,39 @@ export const metadata: Metadata = {
   title: "FlashReport — Surveillance épidémiologique",
   description:
     "Plateforme de surveillance épidémiologique — Ministère de la Santé, République Togolaise.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "FlashReport — Surveillance épidémiologique",
+    description:
+      "Plateforme de surveillance épidémiologique — Ministère de la Santé, République Togolaise.",
+    url: "https://flashreport.tg",
+    siteName: "FlashReport",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FlashReport — Surveillance épidémiologique",
+    description:
+      "Plateforme de surveillance épidémiologique — Ministère de la Santé, République Togolaise.",
+    images: ["/og-image.png"],
+  },
+  manifest: "/site.webmanifest",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "white" },
+    { media: "(prefers-color-scheme: dark)", color: "black" }, ] 
+
 };
 
 // Applique le thème (localStorage -> préférence système) avant le premier rendu,
