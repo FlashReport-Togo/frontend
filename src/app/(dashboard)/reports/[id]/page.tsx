@@ -53,6 +53,8 @@ export default function ReportDetailPage() {
   const [pushing, setPushing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [busyAction, setBusyAction] = useState(false);
+  const [activeTab, setActiveTab] = useState("data");
+  const [focusedCellId, setFocusedCellId] = useState<string | null>(null);
 
   if (isLoading || !report) {
     return (
@@ -64,7 +66,7 @@ export default function ReportDetailPage() {
   }
 
   const isOwner = user?.role === "district_agent" && user.district === report.district;
-  const canEdit = isOwner && report.status === "brouillon";
+  const canEdit = isOwner && (report.status === "brouillon" || report.status === "rejeté");
   const isElevated = user?.role === "regional_focal_point" || user?.role === "national_agent" || user?.role === "admin";
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["reports", id] });
@@ -250,17 +252,30 @@ export default function ReportDetailPage() {
         <Card className="border-severity-critical/30">
           <CardContent>
             <p className="mb-3 text-sm font-semibold text-severity-critical">Anomalies bloquantes</p>
-            <QualityCheckList reportId={id} checks={blockingErrors} />
+            <QualityCheckList
+              reportId={id}
+              checks={blockingErrors}
+              onFocusCheck={(check) => {
+                if (!check.report_cell) return;
+                setActiveTab("data");
+                setFocusedCellId(check.report_cell);
+              }}
+            />
           </CardContent>
         </Card>
       )}
 
-      <Tabs defaultValue="data">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="data">Données</TabsTrigger>
-          <TabsTrigger value="quality">
-            Contrôle qualité{report.quality_checks.length > 0 ? ` (${report.quality_checks.length})` : ""}
-          </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="quality">
+              Contrôle qualité
+              {report.quality_checks.filter((c) => !c.is_resolved).length > 0
+                ? ` (${report.quality_checks.filter((c) => !c.is_resolved).length})`
+                : ""}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="ai">
             Analyse IA{aiHistory && aiHistory.length > 0 ? ` (${aiHistory.length})` : ""}
           </TabsTrigger>
@@ -277,18 +292,31 @@ export default function ReportDetailPage() {
                 onCellChange={(cellId, value) => setPendingValues((p) => ({ ...p, [cellId]: value }))}
                 onAddRow={canEdit ? addRow : undefined}
                 onAddColumn={canEdit ? addColumn : undefined}
+                qualityChecks={report.quality_checks}
+                focusedCellId={focusedCellId}
+                onFocusHandled={() => setFocusedCellId(null)}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="quality">
-          <Card>
-            <CardContent>
-              <QualityCheckList reportId={id} checks={report.quality_checks} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {isOwner && (
+          <TabsContent value="quality">
+            <Card>
+              <CardContent>
+                <QualityCheckList
+                  reportId={id}
+                  checks={report.quality_checks}
+                  onFocusCheck={(check) => {
+                    if (!check.report_cell) return;
+                    setActiveTab("data");
+                    setFocusedCellId(check.report_cell);
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="ai">
           <div className="flex flex-col gap-4">
@@ -310,8 +338,8 @@ export default function ReportDetailPage() {
                       </span>
                       <span className="font-mono">{new Date(entry.created_at).toLocaleString("fr-FR")}</span>
                     </div>
-                    {entry.result?.synthese && <p className="text-sm text-primary">{String(entry.result.synthese)}</p>}
-                    {Array.isArray(entry.result?.tendances) && entry.result.tendances.length > 0 && (
+                    {entry.result.synthese && <p className="text-sm text-primary">{String(entry.result.synthese)}</p>}
+                    {Array.isArray(entry.result.tendances) && entry.result.tendances.length > 0 && (
                       <div>
                         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Tendances</p>
                         <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
@@ -319,7 +347,7 @@ export default function ReportDetailPage() {
                         </ul>
                       </div>
                     )}
-                    {Array.isArray(entry.result?.anomalies) && entry.result.anomalies.length > 0 && (
+                    {Array.isArray(entry.result.anomalies) && entry.result.anomalies.length > 0 && (
                       <div>
                         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Anomalies</p>
                         <ul className="list-disc space-y-1 pl-5 text-sm text-primary">

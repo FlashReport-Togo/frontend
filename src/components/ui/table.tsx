@@ -1,3 +1,5 @@
+import { forwardRef } from "react";
+
 import { cn } from "@/lib/utils";
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -43,6 +45,12 @@ export function Tr({
   );
 }
 
-export function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={cn("whitespace-nowrap px-4 py-3 text-primary", className)}>{children}</td>;
-}
+export const Td = forwardRef<
+  HTMLTableCellElement,
+  { children: React.ReactNode; className?: string; title?: string; onClick?: () => void }
+>(({ children, className, title, onClick }, ref) => (
+  <td ref={ref} title={title} onClick={onClick} className={cn("whitespace-nowrap px-4 py-3 text-primary", className)}>
+    {children}
+  </td>
+));
+Td.displayName = "Td";
