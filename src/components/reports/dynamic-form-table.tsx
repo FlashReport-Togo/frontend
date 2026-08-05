@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -47,6 +47,8 @@ export function DynamicFormTable({
   onCellChange,
   onAddRow,
   onAddColumn,
+  onRemoveRow,
+  onRemoveColumn,
   qualityChecks = [],
   focusedCellId,
   onFocusHandled,
@@ -57,6 +59,8 @@ export function DynamicFormTable({
   onCellChange: (cellId: string, value: string) => void;
   onAddRow?: (label: string) => void;
   onAddColumn?: (label: string) => void;
+  onRemoveRow?: (rowId: string) => void;
+  onRemoveColumn?: (columnKey: string) => void;
   qualityChecks?: QualityCheckResult[];
   focusedCellId?: string | null;
   onFocusHandled?: () => void;
@@ -132,9 +136,21 @@ export function DynamicFormTable({
             <Th>Ligne</Th>
             {columns.map((col) => (
               <Th key={col.key}>
-                {col.label}
-                {col.is_primary_metric && <span className="ml-1 text-severity-medium">★</span>}
-                {col.required && <span className="ml-0.5 text-severity-critical">*</span>}
+                <span className="inline-flex items-center gap-1">
+                  {col.label}
+                  {col.is_primary_metric && <span className="text-severity-medium">★</span>}
+                  {col.required && <span className="text-severity-critical">*</span>}
+                  {editable && onRemoveColumn && report.rows.some((r) => r.cells.some((c) => c.column_key === col.key && c.is_custom)) && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveColumn(col.key)}
+                      title="Supprimer cette colonne"
+                      className="text-secondary hover:text-severity-critical"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </span>
               </Th>
             ))}
           </tr>
@@ -142,7 +158,21 @@ export function DynamicFormTable({
         <Tbody>
           {report.rows.map((row) => (
             <tr key={row.id}>
-              <Td className="font-medium">{row.row_label}</Td>
+              <Td className="font-medium">
+                <span className="inline-flex items-center gap-1.5">
+                  {row.row_label}
+                  {editable && row.is_custom && onRemoveRow && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveRow(row.id)}
+                      title="Supprimer cette ligne"
+                      className="text-secondary hover:text-severity-critical"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </span>
+              </Td>
               {columns.map((col) => {
                 const cell = row.cells.find((c) => c.column_key === col.key);
                 if (!cell) return <Td key={col.key}>—</Td>;

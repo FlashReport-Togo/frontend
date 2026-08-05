@@ -46,6 +46,12 @@ export const reportsApi = {
   addColumn: (id: string, label: string) =>
     api.post<ReportDetail>(`/reports/${id}/add-column/`, { label }).then((r) => r.data),
 
+  removeRow: (id: string, rowId: string) =>
+    api.post<ReportDetail>(`/reports/${id}/remove-row/`, { row_id: rowId }).then((r) => r.data),
+
+  removeColumn: (id: string, columnKey: string) =>
+    api.post<ReportDetail>(`/reports/${id}/remove-column/`, { column_key: columnKey }).then((r) => r.data),
+
   submit: (id: string) => api.post<ReportDetail>(`/reports/${id}/submit/`).then((r) => r.data),
 
   validate: (id: string) => api.post<ReportDetail>(`/reports/${id}/validate/`).then((r) => r.data),
