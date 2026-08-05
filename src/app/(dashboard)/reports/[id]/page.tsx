@@ -364,20 +364,20 @@ export default function ReportDetailPage() {
                       </span>
                       <span className="font-mono">{new Date(entry.created_at).toLocaleString("fr-FR")}</span>
                     </div>
-                    {entry.result.synthese && <p className="text-sm text-primary">{String(entry.result.synthese)}</p>}
-                    {Array.isArray(entry.result.tendances) && entry.result.tendances.length > 0 && (
+                    {entry.result?.synthese && <p className="text-sm text-primary">{String(entry.result?.synthese)}</p>}
+                    {Array.isArray(entry.result?.tendances) && entry.result?.tendances.length > 0 && (
                       <div>
                         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Tendances</p>
                         <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
-                          {entry.result.tendances.map((t, i) => <li key={i}>{String(t)}</li>)}
+                          {entry.result?.tendances.map((t, i) => <li key={i}>{String(t)}</li>)}
                         </ul>
                       </div>
                     )}
-                    {Array.isArray(entry.result.anomalies) && entry.result.anomalies.length > 0 && (
+                    {Array.isArray(entry.result?.anomalies) && entry.result?.anomalies.length > 0 && (
                       <div>
                         <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-secondary">Anomalies</p>
                         <ul className="list-disc space-y-1 pl-5 text-sm text-primary">
-                          {entry.result.anomalies.map((a, i) => <li key={i}>{String(a)}</li>)}
+                          {entry.result?.anomalies.map((a, i) => <li key={i}>{String(a)}</li>)}
                         </ul>
                       </div>
                     )}
